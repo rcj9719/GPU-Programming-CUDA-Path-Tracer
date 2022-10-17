@@ -6,7 +6,7 @@ SPECRGB     0 0 0
 REFL        0
 REFR        0
 REFRIOR     0
-EMITTANCE   5
+EMITTANCE   1
 PROTEX		0
 
 // Diffuse white
@@ -57,10 +57,10 @@ PROTEX		0
 CAMERA
 RES         800 800
 FOVY        45
-ITERATIONS  5000
+ITERATIONS  10
 DEPTH       8
-LENSRADIUS  0
-FOCALDIST   0
+LENSRADIUS  3
+FOCALDIST   10
 FILE        cornell
 EYE         0.0 5 10.5
 LOOKAT      0 5 0
@@ -73,7 +73,7 @@ cube
 material 0
 TRANS       0 10 0
 ROTAT       0 0 0
-SCALE       3 .3 3
+SCALE       10 .3 10
 
 // Floor
 OBJECT 1
