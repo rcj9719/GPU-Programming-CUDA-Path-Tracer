@@ -101,11 +101,11 @@ __global__ void gNormalBufferToPBO(uchar4* pbo, glm::ivec2 resolution, GBufferPi
 
 	if (x < resolution.x && y < resolution.y) {
 		int index = x + (y * resolution.x);
-		glm::vec3 pboNormal = abs(gBuffer[index].nor) * glm::vec3(255.f, 255.f, 255.f);
+		glm::vec3 perPixelNormal = abs(gBuffer[index].nor) * glm::vec3(255.f, 255.f, 255.f);
 		pbo[index].w = 0;
-		pbo[index].x = pboNormal.x;
-		pbo[index].y = pboNormal.y;
-		pbo[index].z = pboNormal.z;
+		pbo[index].x = perPixelNormal.x;
+		pbo[index].y = perPixelNormal.y;
+		pbo[index].z = perPixelNormal.z;
 	}
 }
 
@@ -115,11 +115,11 @@ __global__ void gPositionBufferToPBO(uchar4* pbo, glm::ivec2 resolution, GBuffer
 
 	if (x < resolution.x && y < resolution.y) {
 		int index = x + (y * resolution.x);
-		glm::vec3 pboPosition = abs(gBuffer[index].pos) * glm::vec3(255.f, 255.f, 255.f);
+		glm::vec3 perPixelPosition = abs(gBuffer[index].pos) *glm::vec3(40.f, 40.f, 40.f);
 		pbo[index].w = 0;
-		pbo[index].x = pboPosition.x;
-		pbo[index].y = pboPosition.y;
-		pbo[index].z = pboPosition.z;
+		pbo[index].x = glm::clamp(perPixelPosition.x, 0.f, 255.f);
+		pbo[index].y = glm::clamp(perPixelPosition.y, 0.f, 255.f);
+		pbo[index].z = glm::clamp(perPixelPosition.z, 0.f, 255.f);
 	}
 }
 
@@ -480,7 +480,7 @@ __global__ void generateGBuffer(
 	{
 		gBuffer[idx].t = shadeableIntersections[idx].t;
 		gBuffer[idx].pos = getPointOnRay(pathSegments[idx].ray, shadeableIntersections[idx].t);
-		gBuffer[idx].nor = shadeableIntersections[idx].surfaceNormal;
+		gBuffer[idx].nor = glm::normalize(shadeableIntersections[idx].surfaceNormal);
 	}
 }
 
