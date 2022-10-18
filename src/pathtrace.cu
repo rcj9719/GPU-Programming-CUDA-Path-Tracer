@@ -86,7 +86,7 @@ __global__ void gDepthBufferToPBO(uchar4* pbo, glm::ivec2 resolution, GBufferPix
 
 	if (x < resolution.x && y < resolution.y) {
 		int index = x + (y * resolution.x);
-		float timeToIntersect = gBuffer[index].t * 255.0;
+		float timeToIntersect = gBuffer[index].t * 10.0;
 
 		pbo[index].w = 0;
 		pbo[index].x = timeToIntersect;
@@ -115,7 +115,7 @@ __global__ void gPositionBufferToPBO(uchar4* pbo, glm::ivec2 resolution, GBuffer
 
 	if (x < resolution.x && y < resolution.y) {
 		int index = x + (y * resolution.x);
-		glm::vec3 perPixelPosition = abs(gBuffer[index].pos) *glm::vec3(40.f, 40.f, 40.f);
+		glm::vec3 perPixelPosition = abs(gBuffer[index].pos) * glm::vec3(40.f, 40.f, 40.f);
 		pbo[index].w = 0;
 		pbo[index].x = glm::clamp(perPixelPosition.x, 0.f, 255.f);
 		pbo[index].y = glm::clamp(perPixelPosition.y, 0.f, 255.f);
