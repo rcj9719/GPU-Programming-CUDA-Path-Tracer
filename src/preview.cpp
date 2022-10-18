@@ -249,7 +249,11 @@ void RenderImGui(int windowWidth, int windowHeight)
 
 	ImGui::Separator();
 
-	ImGui::Checkbox("Show GBuffer", &ui_showGbuffer);
+	//ImGui::Checkbox("Show GBuffer", &ui_showGbuffer);
+	ImGui::RadioButton("Final Render", &ui_renderSelect, FINAL);
+	ImGui::RadioButton("Depth", &ui_renderSelect, DEPTH);
+	ImGui::RadioButton("Normal", &ui_renderSelect, NORMAL);
+	ImGui::RadioButton("Position", &ui_renderSelect, POSITION);
 
 	ImGui::Separator();
 

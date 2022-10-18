@@ -9,6 +9,13 @@
 #define FLOAT_MIN -1e38f
 #define FLOAT_MAX 1e38f;
 
+enum {
+    FINAL,
+    DEPTH,
+    NORMAL,
+    POSITION
+};
+
 enum GeomType {
     SPHERE,
     CUBE,
@@ -112,4 +119,5 @@ struct ShadeableIntersection {
 struct GBufferPixel {
     float t;
     glm::vec3 pos;
+    glm::vec3 nor;
 };

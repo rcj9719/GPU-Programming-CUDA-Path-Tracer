@@ -80,18 +80,46 @@ __global__ void sendImageToPBO(uchar4* pbo, glm::ivec2 resolution,
 }
 
 // CHECKITOUT4: process the gbuffer results and send them to OpenGL buffer for visualization
-__global__ void gbufferToPBO(uchar4* pbo, glm::ivec2 resolution, GBufferPixel* gBuffer) {
+__global__ void gDepthBufferToPBO(uchar4* pbo, glm::ivec2 resolution, GBufferPixel* gBuffer) {
 	int x = (blockIdx.x * blockDim.x) + threadIdx.x;
 	int y = (blockIdx.y * blockDim.y) + threadIdx.y;
 
 	if (x < resolution.x && y < resolution.y) {
 		int index = x + (y * resolution.x);
-		float timeToIntersect = gBuffer[index].t * 256.0;
+		float timeToIntersect = gBuffer[index].t * 255.0;
 
 		pbo[index].w = 0;
 		pbo[index].x = timeToIntersect;
 		pbo[index].y = timeToIntersect;
 		pbo[index].z = timeToIntersect;
+	}
+}
+
+__global__ void gNormalBufferToPBO(uchar4* pbo, glm::ivec2 resolution, GBufferPixel* gBuffer) {
+	int x = (blockIdx.x * blockDim.x) + threadIdx.x;
+	int y = (blockIdx.y * blockDim.y) + threadIdx.y;
+
+	if (x < resolution.x && y < resolution.y) {
+		int index = x + (y * resolution.x);
+		glm::vec3 pboNormal = abs(gBuffer[index].nor) * glm::vec3(255.f, 255.f, 255.f);
+		pbo[index].w = 0;
+		pbo[index].x = pboNormal.x;
+		pbo[index].y = pboNormal.y;
+		pbo[index].z = pboNormal.z;
+	}
+}
+
+__global__ void gPositionBufferToPBO(uchar4* pbo, glm::ivec2 resolution, GBufferPixel* gBuffer) {
+	int x = (blockIdx.x * blockDim.x) + threadIdx.x;
+	int y = (blockIdx.y * blockDim.y) + threadIdx.y;
+
+	if (x < resolution.x && y < resolution.y) {
+		int index = x + (y * resolution.x);
+		glm::vec3 pboPosition = abs(gBuffer[index].pos) * glm::vec3(255.f, 255.f, 255.f);
+		pbo[index].w = 0;
+		pbo[index].x = pboPosition.x;
+		pbo[index].y = pboPosition.y;
+		pbo[index].z = pboPosition.z;
 	}
 }
 
@@ -451,6 +479,8 @@ __global__ void generateGBuffer(
 	if (idx < num_paths)
 	{
 		gBuffer[idx].t = shadeableIntersections[idx].t;
+		gBuffer[idx].pos = getPointOnRay(pathSegments[idx].ray, shadeableIntersections[idx].t);
+		gBuffer[idx].nor = shadeableIntersections[idx].surfaceNormal;
 	}
 }
 
@@ -655,7 +685,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 }
 
 // CHECKITOUT4: this kernel "post-processes" the gbuffer/gbuffers into something that you can visualize for debugging.
-void showGBuffer(uchar4* pbo) {
+void showGBuffer(uchar4* pbo, int renderSelect) {
 	const Camera& cam = hst_scene->state.camera;
 	const dim3 blockSize2d(8, 8);
 	const dim3 blocksPerGrid2d(
@@ -663,7 +693,15 @@ void showGBuffer(uchar4* pbo) {
 		(cam.resolution.y + blockSize2d.y - 1) / blockSize2d.y);
 
 	// CHECKITOUT: process the gbuffer results and send them to OpenGL buffer for visualization
-	gbufferToPBO << <blocksPerGrid2d, blockSize2d >> > (pbo, cam.resolution, dev_gBuffer);
+	switch (renderSelect) {
+	case DEPTH: gDepthBufferToPBO << <blocksPerGrid2d, blockSize2d >> > (pbo, cam.resolution, dev_gBuffer);
+		break;
+	case NORMAL: gNormalBufferToPBO << <blocksPerGrid2d, blockSize2d >> > (pbo, cam.resolution, dev_gBuffer);
+		break;
+	case POSITION: gPositionBufferToPBO << <blocksPerGrid2d, blockSize2d >> > (pbo, cam.resolution, dev_gBuffer);
+		break;
+	}
+	
 }
 
 void showImage(uchar4* pbo, int iter) {
