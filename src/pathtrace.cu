@@ -484,6 +484,26 @@ __global__ void generateGBuffer(
 	}
 }
 
+__global__ void denoiser(
+	int num_paths,
+	ShadeableIntersection* shadeableIntersections,
+	PathSegment* pathSegments,
+	GBufferPixel* gBuffer) {
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	if (idx < num_paths)
+	{
+		glm::vec3 cval = pathSegments[idx].color;
+		glm::vec3 nval = gBuffer[idx].nor;
+		glm::vec3 pval = gBuffer[idx].pos;
+
+		float cum_v = 0.0;
+
+		for (int i = 0; i < 25; i++) {
+			//glm::vec2 uv = 
+		}
+	}
+}
+
 // Add the current iteration's output to the overall image
 __global__ void finalGather(int nPaths, glm::vec3* image, PathSegment* iterationPaths)
 {
@@ -626,7 +646,6 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 		if (depth == 0) {
 			generateGBuffer << <numblocksPathSegmentTracing, blockSize1d >> > (num_paths, dev_intersections, dev_paths, dev_gBuffer);
 		}
-		depth++;
 
 		// TODO:
 		// --- Shading Stage ---
@@ -654,8 +673,11 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 		dev_path_end = thrust::partition(thrust::device, dev_paths, dev_paths + new_num_paths, is_Terminated());
 		new_num_paths = dev_path_end - dev_paths;
 
-		// 5. Cache first bounce
+		if (depth == 0) {
+			denoiser << <numblocksPathSegmentTracing, blockSize1d >> > (num_paths, dev_intersections, dev_paths, dev_gBuffer);
+		}
 
+		depth++;
 		if (new_num_paths == 0){
 			iterationComplete = true;
 		}
