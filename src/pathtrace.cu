@@ -137,7 +137,7 @@ static ShadeableIntersection* dev_intersections = NULL;
 static ShadeableIntersection* dev_cache_intersections = NULL;
 static GBufferPixel* dev_gBuffer = NULL;
 static float* dev_filter = NULL;
-static glm::vec2* dev_filterOffsets = NULL;
+static glm::ivec2* dev_filterOffsets = NULL;
 static glm::vec3* dev_denoised_image = NULL;
 
 void InitDataContainer(GuiDataContainer* imGuiData)
@@ -162,11 +162,11 @@ void InitDataContainer(GuiDataContainer* imGuiData)
 //
 //}
 
-void generateFilterOffsets(std::vector<glm::vec2> &filterOffsets, std::vector<float> &filter) {
+void generateFilterOffsets(std::vector<glm::ivec2> &filterOffsets, std::vector<float> &filter) {
 	for (int i = -2; i <= 2; i++) {
 		for (int j = -2; j <= 2; j++) {
 			
-			filterOffsets.push_back(glm::vec2(i, j));
+			filterOffsets.push_back(glm::ivec2(i, j));
 			
 			float temp;
 			temp = (pow(0.25, (abs(i) + abs(j))));
@@ -190,13 +190,13 @@ void pathtraceInit(Scene* scene) {
 	const int pixelcount = cam.resolution.x * cam.resolution.y;
 
 	std::vector<float> filter;
-	std::vector<glm::vec2> filterOffsets;
+	std::vector<glm::ivec2> filterOffsets;
 	generateFilterOffsets(filterOffsets, filter);
 	for (auto& f : filter) {
 		printf("%f, ", f);
 	}
 	for (auto& f : filterOffsets) {
-		printf("(%f, %f), ", f.x, f.y);
+		printf("(%d, %d), ", f.x, f.y);
 	}
 
 	cudaMalloc(&dev_image, pixelcount * sizeof(glm::vec3));
@@ -559,7 +559,7 @@ __global__ void denoiser(
 	glm::vec3* outputImage,
 	GBufferPixel* gBuffer,
 	float* filter,
-	glm::vec2* filterOffsets) {
+	glm::ivec2* filterOffsets) {
 
 	int x = (blockIdx.x * blockDim.x) + threadIdx.x;
 	int y = (blockIdx.y * blockDim.y) + threadIdx.y;
@@ -578,7 +578,7 @@ __global__ void denoiser(
 		{
 			int stepWidth = 1 << stepIter;
 			for (int i = 0; i < 25; i++) {
-				glm::vec2 uv = filterOffsets[i] * glm::vec2(stepWidth) + glm::vec2(x, y);
+				glm::ivec2 uv = glm::ivec2(filterOffsets[i].x * stepWidth, filterOffsets[i].y * stepWidth) + glm::ivec2(x, y);
 
 				if (uv.x < resolution.x && uv.x >= 0 && y < resolution.y && uv.y >= 0) {
 					int idxtmp = uv.x + (uv.y * resolution.x);
