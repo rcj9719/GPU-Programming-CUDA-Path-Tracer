@@ -230,12 +230,12 @@ void pathtraceInit(Scene* scene) {
 	cudaMalloc(&dev_gBuffer, pixelcount * sizeof(GBufferPixel));
 	cudaMemset(dev_gBuffer, 0, pixelcount * sizeof(GBufferPixel));
 
-	cudaMalloc(&dev_filter, sizeof(filter));
-	cudaMemcpy(dev_filter, filter.data(), sizeof(filter), cudaMemcpyHostToDevice);
+	cudaMalloc(&dev_filter, 25 * sizeof(float));
+	cudaMemcpy(dev_filter, filter.data(), 25 * sizeof(float), cudaMemcpyHostToDevice);
 
-	cudaMalloc(&dev_filterOffsets, sizeof(filterOffsets));
-	cudaMemcpy(dev_filterOffsets, filterOffsets.data(), sizeof(filterOffsets), cudaMemcpyHostToDevice);
-	
+	cudaMalloc(&dev_filterOffsets, 25 * sizeof(glm::ivec2));
+	cudaMemcpy(dev_filterOffsets, filterOffsets.data(), 25 * sizeof(glm::ivec2), cudaMemcpyHostToDevice);
+
 	cudaMalloc(&dev_denoised_image, pixelcount * sizeof(glm::vec3));
 	cudaMemset(dev_denoised_image, 0, pixelcount * sizeof(glm::vec3));
 	checkCUDAError("pathtraceInit");
@@ -367,9 +367,6 @@ __global__ void computeIntersections(
 )
 {
 	int path_index = blockIdx.x * blockDim.x + threadIdx.x;
-	/*if (pathSegments[path_index].remainingBounces <= 0) {
-		return;
-	}*/
 
 	if (path_index < num_paths)
 	{
@@ -566,30 +563,28 @@ __global__ void denoiser(
 
 	if (x < resolution.x && y < resolution.y) {
 		int idx = x + (y * resolution.x);
-
 		glm::vec2 step = 1 / resolution;
 		glm::vec4 sum = glm::vec4(0.f);
 		glm::vec3 cval = inputImage[idx];
-		//glm::vec3 nval = gBuffer[idx].nor;
-		//glm::vec3 pval = gBuffer[idx].pos;
 		glm::vec3 outputColor = glm::vec3(0.f);
-		//float cum_w = 0.0;
-		for (int stepIter = 0; stepIter < 10; stepIter++)
-		{
+		float cum_w = 0.0;
+		
+		for (int stepIter = 0; stepIter < 10; stepIter++) {
 			int stepWidth = 1 << stepIter;
+
 			for (int i = 0; i < 25; i++) {
 				glm::ivec2 uv = glm::ivec2(filterOffsets[i].x * stepWidth, filterOffsets[i].y * stepWidth) + glm::ivec2(x, y);
-
-				if (uv.x < resolution.x && uv.x >= 0 && y < resolution.y && uv.y >= 0) {
+				if (uv.x < resolution.x && uv.x >= 0 && uv.y < resolution.y && uv.y >= 0) {
 					int idxtmp = uv.x + (uv.y * resolution.x);
 
 					//if (idxtmp > 0 && idxtmp < num_paths) {
 					glm::vec3 ctmp = inputImage[idxtmp];
 					outputColor += filter[i] * ctmp;
+					cum_w += filter[i];
 				}
 			}
 		}
-		outputImage[idx] = outputColor;
+		outputImage[idx] = outputColor/cum_w;
 	}
 }
 
@@ -779,12 +774,8 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 	finalGather << <numBlocksPixels, blockSize1d >> > (num_paths, dev_image, dev_paths);
 
 	///////////////////////////////////////////////////////////////////////////
-
-	// Send results to OpenGL buffer for rendering
-	//sendImageToPBO << <blocksPerGrid2d, blockSize2d >> > (pbo, cam.resolution, iter, dev_image);
-	
 	denoiser << <blocksPerGrid2d, blockSize2d >> > (num_paths, cam.resolution, dev_image, dev_denoised_image, dev_gBuffer, dev_filter, dev_filterOffsets);
-	//denoiser << <numBlocksPixels, blockSize1d >> > (num_paths, cam.resolution, dev_image, dev_denoised_image, dev_gBuffer, dev_filter, dev_filterOffsets);
+	
 	
 	// CHECKITOUT4: use dev_image as reference if you want to implement saving denoised images.
 	// Otherwise, screenshots are also acceptable.
