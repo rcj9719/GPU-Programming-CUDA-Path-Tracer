@@ -179,7 +179,12 @@ void runCuda() {
 		showGBuffer(pbo_dptr, ui_renderSelect);
 	}
 	else {
-		showImage(pbo_dptr, iteration);
+		if (ui_denoise) {
+			showDenoisedImage(pbo_dptr, iteration);
+		}
+		else {
+			showImage(pbo_dptr, iteration);
+		}
 	}
 
 	/*if (ui_showGbuffer) {
