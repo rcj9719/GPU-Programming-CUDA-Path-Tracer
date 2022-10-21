@@ -25,9 +25,9 @@
 #define PIOVER2 1.57079632679
 #define PI 3.14159265359
 
-#define ANTIALIASING 1
-#define CACHEINTERSECTIONS 0
-#define DOF 1
+#define ANTIALIASING 0
+#define CACHEINTERSECTIONS 1
+#define DOF 0
 #define SORTMATERIALS 1
 
 #define DENOISER 0
@@ -233,7 +233,7 @@ void pathtraceInit(Scene* scene) {
 	cudaMalloc(&dev_filter, sizeof(filter));
 	cudaMemcpy(dev_filter, filter.data(), sizeof(filter), cudaMemcpyHostToDevice);
 
-	cudaMalloc(&dev_filterOffsets, sizeof(filter));
+	cudaMalloc(&dev_filterOffsets, sizeof(filterOffsets));
 	cudaMemcpy(dev_filterOffsets, filterOffsets.data(), sizeof(filterOffsets), cudaMemcpyHostToDevice);
 	
 	cudaMalloc(&dev_denoised_image, pixelcount * sizeof(glm::vec3));
