@@ -30,7 +30,8 @@
 #define DOF 0
 #define SORTMATERIALS 1
 
-#define DENOISER 0
+#define DENOISER 1
+#define DENOISER_EDGE_AVOIDING 0
 
 void checkCUDAErrorFn(const char* msg, const char* file, int line) {
 #if ERRORCHECK
@@ -552,6 +553,9 @@ __global__ void generateGBuffer(
 __global__ void denoiser(
 	int num_paths,
 	glm::ivec2 resolution,
+	float cphi,
+	float nphi,
+	float pphi,
 	glm::vec3* inputImage,
 	glm::vec3* outputImage,
 	GBufferPixel* gBuffer,
@@ -565,22 +569,46 @@ __global__ void denoiser(
 		int idx = x + (y * resolution.x);
 		glm::vec2 step = 1 / resolution;
 		glm::vec4 sum = glm::vec4(0.f);
+
 		glm::vec3 cval = inputImage[idx];
+		glm::vec3 pval = gBuffer[idx].pos;
+		glm::vec3 nval = gBuffer[idx].nor;
+		
 		glm::vec3 outputColor = glm::vec3(0.f);
 		float cum_w = 0.0;
-		
+		float weight = 1.f;
 		for (int stepIter = 0; stepIter < 10; stepIter++) {
 			int stepWidth = 1 << stepIter;
 
 			for (int i = 0; i < 25; i++) {
 				glm::ivec2 uv = glm::ivec2(filterOffsets[i].x * stepWidth, filterOffsets[i].y * stepWidth) + glm::ivec2(x, y);
+				
 				if (uv.x < resolution.x && uv.x >= 0 && uv.y < resolution.y && uv.y >= 0) {
 					int idxtmp = uv.x + (uv.y * resolution.x);
-
 					//if (idxtmp > 0 && idxtmp < num_paths) {
+
 					glm::vec3 ctmp = inputImage[idxtmp];
-					outputColor += filter[i] * ctmp;
-					cum_w += filter[i];
+
+#if DENOISER_EDGE_AVOIDING
+					glm::vec3 t = cval - ctmp;
+					float dist2 = glm::dot(t, t);
+					float c_w = glm::min(glm::exp(-(dist2)/cphi), 1.f);
+
+					glm::vec3 ntmp = gBuffer[idxtmp].nor;
+					t = nval - ntmp;
+					dist2 = glm::max(glm::dot(t, t)/(stepWidth * stepWidth), 0.f);
+					float n_w = glm::min(glm::exp(-(dist2) / nphi), 1.f);
+
+					glm::vec3 ptmp = gBuffer[idxtmp].pos;
+					t = pval - ptmp;
+					dist2 = glm::dot(t, t);
+					float p_w = glm::min(glm::exp(-(dist2) / pphi), 1.f);
+
+					weight = c_w * n_w * p_w;
+
+#endif
+					outputColor += weight * filter[i] * ctmp;
+					cum_w += weight * filter[i];
 				}
 			}
 		}
@@ -618,7 +646,7 @@ struct compareMaterialId {
  * Wrapper for the __global__ call that sets up the kernel calls and does a ton
  * of memory management
  */
-void pathtrace(uchar4* pbo, int frame, int iter) {
+void pathtrace(uchar4* pbo, int frame, int iter, float cphi, float nphi, float pphi) {
 	const int traceDepth = hst_scene->state.traceDepth;
 	const Camera& cam = hst_scene->state.camera;
 	const int pixelcount = cam.resolution.x * cam.resolution.y;
@@ -754,10 +782,6 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 		dev_path_end = thrust::partition(thrust::device, dev_paths, dev_paths + new_num_paths, is_Terminated());
 		new_num_paths = dev_path_end - dev_paths;
 
-		/*if (depth == 0) {
-			denoiser << <numblocksPathSegmentTracing, blockSize1d >> > (num_paths, dev_intersections, dev_paths, dev_gBuffer);
-		}*/
-
 		depth++;
 		if (new_num_paths == 0){
 			iterationComplete = true;
@@ -774,8 +798,9 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 	finalGather << <numBlocksPixels, blockSize1d >> > (num_paths, dev_image, dev_paths);
 
 	///////////////////////////////////////////////////////////////////////////
-	denoiser << <blocksPerGrid2d, blockSize2d >> > (num_paths, cam.resolution, dev_image, dev_denoised_image, dev_gBuffer, dev_filter, dev_filterOffsets);
-	
+#if DENOISER
+	denoiser << <blocksPerGrid2d, blockSize2d >> > (num_paths, cam.resolution, cphi, nphi, pphi, dev_image, dev_denoised_image, dev_gBuffer, dev_filter, dev_filterOffsets);
+#endif
 	
 	// CHECKITOUT4: use dev_image as reference if you want to implement saving denoised images.
 	// Otherwise, screenshots are also acceptable.
@@ -826,6 +851,8 @@ void showDenoisedImage(uchar4* pbo, int iter) {
 		(cam.resolution.y + blockSize2d.y - 1) / blockSize2d.y);
 
 	// Send results to OpenGL buffer for rendering
+#if DENOISER
 	sendImageToPBO << <blocksPerGrid2d, blockSize2d >> > (pbo, cam.resolution, iter, dev_denoised_image);
+#endif
 }
 

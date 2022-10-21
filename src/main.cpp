@@ -172,7 +172,10 @@ void runCuda() {
 
 		// execute the kernel
 		int frame = 0;
-		pathtrace(pbo_dptr, frame, iteration);
+		float cphi = ui_colorWeight * ui_colorWeight;
+		float nphi = ui_normalWeight * ui_normalWeight;
+		float pphi = ui_positionWeight * ui_positionWeight;
+		pathtrace(pbo_dptr, frame, iteration, cphi, nphi, pphi);
 	}
 
 	if (ui_renderSelect) {
