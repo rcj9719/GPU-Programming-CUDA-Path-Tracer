@@ -31,7 +31,7 @@
 #define SORTMATERIALS 1
 
 #define DENOISER 1
-#define DENOISER_EDGE_AVOIDING 0
+#define DENOISER_EDGE_AVOIDING 1
 
 void checkCUDAErrorFn(const char* msg, const char* file, int line) {
 #if ERRORCHECK
@@ -139,7 +139,8 @@ static ShadeableIntersection* dev_cache_intersections = NULL;
 static GBufferPixel* dev_gBuffer = NULL;
 static float* dev_filter = NULL;
 static glm::ivec2* dev_filterOffsets = NULL;
-static glm::vec3* dev_denoised_image = NULL;
+static glm::vec3* dev_denoised_image_input = NULL;
+static glm::vec3* dev_denoised_image_output = NULL;
 
 void InitDataContainer(GuiDataContainer* imGuiData)
 {
@@ -237,8 +238,11 @@ void pathtraceInit(Scene* scene) {
 	cudaMalloc(&dev_filterOffsets, 25 * sizeof(glm::ivec2));
 	cudaMemcpy(dev_filterOffsets, filterOffsets.data(), 25 * sizeof(glm::ivec2), cudaMemcpyHostToDevice);
 
-	cudaMalloc(&dev_denoised_image, pixelcount * sizeof(glm::vec3));
-	cudaMemset(dev_denoised_image, 0, pixelcount * sizeof(glm::vec3));
+	cudaMalloc(&dev_denoised_image_input, pixelcount * sizeof(glm::vec3));
+	cudaMemset(dev_denoised_image_input, 0, pixelcount * sizeof(glm::vec3));
+	
+	cudaMalloc(&dev_denoised_image_output, pixelcount * sizeof(glm::vec3));
+	cudaMemset(dev_denoised_image_output, 0, pixelcount * sizeof(glm::vec3));
 	checkCUDAError("pathtraceInit");
 }
 
@@ -261,7 +265,8 @@ void pathtraceFree(Scene* scene) {
 	cudaFree(dev_gBuffer);
 	cudaFree(dev_filter);
 	cudaFree(dev_filterOffsets);
-	cudaFree(dev_denoised_image);
+	cudaFree(dev_denoised_image_input);
+	cudaFree(dev_denoised_image_output);
 
 #if CACHEINTERSECTIONS
 	cudaFree(dev_cache_intersections);
@@ -552,6 +557,7 @@ __global__ void generateGBuffer(
 
 __global__ void denoiser(
 	int num_paths,
+	int stepWidth,
 	glm::ivec2 resolution,
 	float cphi,
 	float nphi,
@@ -577,8 +583,8 @@ __global__ void denoiser(
 		glm::vec3 outputColor = glm::vec3(0.f);
 		float cum_w = 0.0;
 		float weight = 1.f;
-		for (int stepIter = 0; stepIter < 10; stepIter++) {
-			int stepWidth = 1 << stepIter;
+		//for (int stepIter = 0; stepIter < 10; stepIter++) {
+		//	stepWidth = 1 << stepIter;
 
 			for (int i = 0; i < 25; i++) {
 				glm::ivec2 uv = glm::ivec2(filterOffsets[i].x * stepWidth, filterOffsets[i].y * stepWidth) + glm::ivec2(x, y);
@@ -611,7 +617,7 @@ __global__ void denoiser(
 					cum_w += weight * filter[i];
 				}
 			}
-		}
+		//}
 		outputImage[idx] = outputColor/cum_w;
 	}
 }
@@ -799,7 +805,15 @@ void pathtrace(uchar4* pbo, int frame, int iter, float cphi, float nphi, float p
 
 	///////////////////////////////////////////////////////////////////////////
 #if DENOISER
-	denoiser << <blocksPerGrid2d, blockSize2d >> > (num_paths, cam.resolution, cphi, nphi, pphi, dev_image, dev_denoised_image, dev_gBuffer, dev_filter, dev_filterOffsets);
+
+	cudaMemcpy(dev_denoised_image_input, dev_image, pixelcount * sizeof(glm::vec3), cudaMemcpyDeviceToDevice);
+
+	int stepWidth = 0;
+	for (int stepIter = 0; stepIter < 5; stepIter++) {
+		stepWidth = 1 << stepIter;
+		denoiser << <blocksPerGrid2d, blockSize2d >> > (num_paths, stepWidth, cam.resolution, cphi, nphi, pphi, dev_denoised_image_input, dev_denoised_image_output, dev_gBuffer, dev_filter, dev_filterOffsets);
+		std::swap(dev_denoised_image_input, dev_denoised_image_output);
+	}
 #endif
 	
 	// CHECKITOUT4: use dev_image as reference if you want to implement saving denoised images.
@@ -852,7 +866,7 @@ void showDenoisedImage(uchar4* pbo, int iter) {
 
 	// Send results to OpenGL buffer for rendering
 #if DENOISER
-	sendImageToPBO << <blocksPerGrid2d, blockSize2d >> > (pbo, cam.resolution, iter, dev_denoised_image);
+	sendImageToPBO << <blocksPerGrid2d, blockSize2d >> > (pbo, cam.resolution, iter, dev_denoised_image_output);
 #endif
 }
 
