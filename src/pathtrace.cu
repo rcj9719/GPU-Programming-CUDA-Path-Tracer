@@ -556,7 +556,7 @@ __global__ void generateGBuffer(
 }
 
 __global__ void denoiser(
-	int num_paths,
+	//int num_paths,
 	int stepWidth,
 	glm::ivec2 resolution,
 	float cphi,
@@ -805,15 +805,16 @@ void pathtrace(uchar4* pbo, int frame, int iter, float cphi, float nphi, float p
 
 	///////////////////////////////////////////////////////////////////////////
 #if DENOISER
-
-	cudaMemcpy(dev_denoised_image_input, dev_image, pixelcount * sizeof(glm::vec3), cudaMemcpyDeviceToDevice);
-
-	int stepWidth = 0;
-	for (int stepIter = 0; stepIter < 5; stepIter++) {
-		stepWidth = 1 << stepIter;
-		denoiser << <blocksPerGrid2d, blockSize2d >> > (num_paths, stepWidth, cam.resolution, cphi, nphi, pphi, dev_denoised_image_input, dev_denoised_image_output, dev_gBuffer, dev_filter, dev_filterOffsets);
-		std::swap(dev_denoised_image_input, dev_denoised_image_output);
-	}
+	//cudaMemcpy(dev_denoised_image_input, dev_image, pixelcount * sizeof(glm::vec3), cudaMemcpyDeviceToDevice);
+	//if (iter == 1) {
+	//	printf("\n######### %f, %f, %f", cphi, nphi, pphi);
+	//}
+	//int stepWidth = 0;
+	//for (int stepIter = 0; stepIter < 5; stepIter++) {
+	//	stepWidth = 1 << stepIter;
+	//	denoiser << <blocksPerGrid2d, blockSize2d >> > (num_paths, stepWidth, cam.resolution, cphi, nphi, pphi, dev_denoised_image_input, dev_denoised_image_output, dev_gBuffer, dev_filter, dev_filterOffsets);
+	//	std::swap(dev_denoised_image_input, dev_denoised_image_output);
+	//}
 #endif
 	
 	// CHECKITOUT4: use dev_image as reference if you want to implement saving denoised images.
@@ -857,7 +858,7 @@ void showImage(uchar4* pbo, int iter) {
 	sendImageToPBO << <blocksPerGrid2d, blockSize2d >> > (pbo, cam.resolution, iter, dev_image);
 }
 
-void showDenoisedImage(uchar4* pbo, int iter) {
+void showDenoisedImage(uchar4* pbo, int iter, float cphi, float nphi, float pphi) {
 	const Camera& cam = hst_scene->state.camera;
 	const dim3 blockSize2d(8, 8);
 	const dim3 blocksPerGrid2d(
@@ -866,6 +867,17 @@ void showDenoisedImage(uchar4* pbo, int iter) {
 
 	// Send results to OpenGL buffer for rendering
 #if DENOISER
+	const int pixelcount = cam.resolution.x * cam.resolution.y;
+	cudaMemcpy(dev_denoised_image_input, dev_image, pixelcount * sizeof(glm::vec3), cudaMemcpyDeviceToDevice);
+	if (iter == 1) {
+		printf("\n######### %f, %f, %f", cphi, nphi, pphi);
+	}
+	int stepWidth = 0;
+	for (int stepIter = 0; stepIter < 5; stepIter++) {
+		stepWidth = 1 << stepIter;
+		denoiser << <blocksPerGrid2d, blockSize2d >> > (stepWidth, cam.resolution, cphi, nphi, pphi, dev_denoised_image_input, dev_denoised_image_output, dev_gBuffer, dev_filter, dev_filterOffsets);
+		std::swap(dev_denoised_image_input, dev_denoised_image_output);
+	}
 	sendImageToPBO << <blocksPerGrid2d, blockSize2d >> > (pbo, cam.resolution, iter, dev_denoised_image_output);
 #endif
 }

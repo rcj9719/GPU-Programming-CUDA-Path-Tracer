@@ -178,17 +178,33 @@ void runCuda() {
 		pathtrace(pbo_dptr, frame, iteration, cphi, nphi, pphi);
 	}
 
-	if (ui_renderSelect) {
+	if (ui_denoise) {
+		float cphi = ui_colorWeight * ui_colorWeight;
+		float nphi = ui_normalWeight * ui_normalWeight;
+		float pphi = ui_positionWeight * ui_positionWeight;
+		showDenoisedImage(pbo_dptr, iteration, cphi, nphi, pphi);
+	}
+	else if (ui_renderSelect) {
 		showGBuffer(pbo_dptr, ui_renderSelect);
 	}
 	else {
-		if (ui_denoise) {
-			showDenoisedImage(pbo_dptr, iteration);
-		}
-		else {
-			showImage(pbo_dptr, iteration);
-		}
+		showImage(pbo_dptr, iteration);
 	}
+
+	//if (ui_renderSelect) {
+	//	showGBuffer(pbo_dptr, ui_renderSelect);
+	//}
+	//else {
+	//	if (ui_denoise) {
+	//		float cphi = ui_colorWeight * ui_colorWeight;
+	//		float nphi = ui_normalWeight * ui_normalWeight;
+	//		float pphi = ui_positionWeight * ui_positionWeight;
+	//		showDenoisedImage(pbo_dptr, iteration, cphi, nphi, pphi);
+	//	}
+	//	else {
+	//		showImage(pbo_dptr, iteration);
+	//	}
+	//}
 
 	/*if (ui_showGbuffer) {
 		showGBuffer(pbo_dptr);
