@@ -194,12 +194,6 @@ void pathtraceInit(Scene* scene) {
 	std::vector<float> filter;
 	std::vector<glm::ivec2> filterOffsets;
 	generateFilterOffsets(filterOffsets, filter);
-	for (auto& f : filter) {
-		printf("%f, ", f);
-	}
-	for (auto& f : filterOffsets) {
-		printf("(%d, %d), ", f.x, f.y);
-	}
 
 	cudaMalloc(&dev_image, pixelcount * sizeof(glm::vec3));
 	cudaMemset(dev_image, 0, pixelcount * sizeof(glm::vec3));
@@ -652,7 +646,7 @@ struct compareMaterialId {
  * Wrapper for the __global__ call that sets up the kernel calls and does a ton
  * of memory management
  */
-void pathtrace(uchar4* pbo, int frame, int iter, float cphi, float nphi, float pphi) {
+void pathtrace(uchar4* pbo, int frame, int iter) {
 	const int traceDepth = hst_scene->state.traceDepth;
 	const Camera& cam = hst_scene->state.camera;
 	const int pixelcount = cam.resolution.x * cam.resolution.y;
@@ -804,18 +798,6 @@ void pathtrace(uchar4* pbo, int frame, int iter, float cphi, float nphi, float p
 	finalGather << <numBlocksPixels, blockSize1d >> > (num_paths, dev_image, dev_paths);
 
 	///////////////////////////////////////////////////////////////////////////
-#if DENOISER
-	//cudaMemcpy(dev_denoised_image_input, dev_image, pixelcount * sizeof(glm::vec3), cudaMemcpyDeviceToDevice);
-	//if (iter == 1) {
-	//	printf("\n######### %f, %f, %f", cphi, nphi, pphi);
-	//}
-	//int stepWidth = 0;
-	//for (int stepIter = 0; stepIter < 5; stepIter++) {
-	//	stepWidth = 1 << stepIter;
-	//	denoiser << <blocksPerGrid2d, blockSize2d >> > (num_paths, stepWidth, cam.resolution, cphi, nphi, pphi, dev_denoised_image_input, dev_denoised_image_output, dev_gBuffer, dev_filter, dev_filterOffsets);
-	//	std::swap(dev_denoised_image_input, dev_denoised_image_output);
-	//}
-#endif
 	
 	// CHECKITOUT4: use dev_image as reference if you want to implement saving denoised images.
 	// Otherwise, screenshots are also acceptable.
@@ -869,9 +851,6 @@ void showDenoisedImage(uchar4* pbo, int iter, float cphi, float nphi, float pphi
 #if DENOISER
 	const int pixelcount = cam.resolution.x * cam.resolution.y;
 	cudaMemcpy(dev_denoised_image_input, dev_image, pixelcount * sizeof(glm::vec3), cudaMemcpyDeviceToDevice);
-	if (iter == 1) {
-		printf("\n######### %f, %f, %f", cphi, nphi, pphi);
-	}
 	int stepWidth = 0;
 	for (int stepIter = 0; stepIter < 5; stepIter++) {
 		stepWidth = 1 << stepIter;
