@@ -153,11 +153,23 @@ Each material in the scene has a unique ID that scene intersections reference wh
 
 I enhanced my path tracer further by implementing ATrous edge avoiding denoiser. This denoiser uses ATrous filter which reduces the numbder of pixels to be taken into consideration for blur, by iteratively spreading a small mask/filter spatially.
 
-However, the filter along simply blurs the entire image without taking features like edges, positions, depth and normals into consideration. To detect and avoid edges while applying the filter, we make use of deferred shading, in which we first store the geometry information such as position, normals and depth in a buffer and based on weights assigned to each buffer, tune our denoiser for better results.
+However, the filter along simply blurs the entire image without taking features like edges, positions, depth and normals into consideration.
+
+|ATrous simple blur| Atrous filter with edge avoidance|
+|---|---|
+|![](img/denoiser/atrous.png)|![](img/denoiser/atrousedgeavoid.png)|
+
+To detect and avoid edges while applying the filter, we make use of deferred shading, in which we first store the geometry information such as position, normals and depth in a buffer and based on weights assigned to each buffer, tune our denoiser for better results.
 
 |Position G-buffer|Normal G-buffer|Depth G-buffer|
- 
- 
+|---|---|---|
+|![](img/denoiser/position.png)|![](img/denoiser/normal.png)|![](img/denoiser/depth.png)|
+
+This denoiser however, does not always give best visual approximation especially for specular transmissive materials as you can see below
+
+|Diffused|Reflective|Transmissive|
+|---|---|---|
+|![](img/denoiser/diffuse_10_16_65.png)|![](img/denoiser/reflective_10_16_65.png)|![](img/denoiser/transmissive_10_16_65.png)|
 
 ## Bloopers
 
