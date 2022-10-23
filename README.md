@@ -19,7 +19,7 @@ In this branch, I have explained how I enhanced my path tracer by implementinf a
 
 |Before denoising(10 iterations)|After denoising (10 iterations)|
 |---|---|
-|![](/img/denoiser/nondenoise_10_time_776dot137.png|![](/img/denoiser/denoise_10_16_65_time_798dot5116.png|
+|![](/img/denoiser/nondenoise_10_time_776dot137.png)|![](/img/denoiser/denoise_10_16_65_time_798dot5116.png)|
 |Time taken: 776.137ms|Time taken: 798.5116ms|
 
 ## Technical Background
@@ -102,6 +102,11 @@ This denoiser does not always appear to give best visual approximation especiall
 **Transmissive** - Transmissive materials may also lose some prominent visible features such as caustics.
 ![](img/denoiser/transmissive_10_16_65.png)
 
+### Obtaining visually smooth results
 
+|Status|Iterations|Time taken|Render|
+|---|---|---|---|---|
+|Denoiser on|10|0.798 seconds|![](img/denoiser/denoise_10_16_65_time_798dot5116.png)|
+|Denoiser off|200|13.96 seconds|![](img/denoiser/nondenoise_200_time_13961dot3.png)|
 
 ## Bloopers
