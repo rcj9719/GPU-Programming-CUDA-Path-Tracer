@@ -109,4 +109,17 @@ This denoiser does not always appear to give best visual approximation especiall
 |Denoiser on|10|0.798 seconds|![](img/denoiser/denoise_10_16_65_time_798dot5116.png)|
 |Denoiser off|200|13.96 seconds|![](img/denoiser/nondenoise_200_time_13961dot3.png)|
 
+We can see that while we make lose some details on specular reflections, a denoiser can give us fairly smooth images in very few iterations.
+
+## References
+
+1. ["Edge-Avoiding A-Trous Wavelet Transform for fast Global Illumination Filtering,"](https://jo.dreggn.org/home/2010_atrous.pdf) by Dammertz, Sewtz, Hanika, and Lensch.
+2. UPenn CIS 565 Course Notes and presentation slides
+
+
 ## Bloopers
+
+![](img/denoiser/blooper1.png)
+![](img/denoiser/blooper2.png)
+![](img/denoiser/blooper3.png)
+![](img/denoiser/blooper4.png)
