@@ -81,7 +81,6 @@ While the denoiser may add a small overhead, it generates equally acceptable ima
 |600 x 600|5.72173 ms|![](img/denoiser/600.png)|
 |800 x 800|13.4084 ms|![](img/denoiser/800.png)|
 |1000 x 1000|17.682 ms|![](img/denoiser/1000.png)|
-|1200 x 1200|25.1773 ms|![](img/denoiser/1200.png)|
 
 This denoiser does not always appear to give best visual approximation especially for specular transmissive materials as you can see below
 
