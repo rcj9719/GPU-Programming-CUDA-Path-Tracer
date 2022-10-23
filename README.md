@@ -11,18 +11,16 @@ CUDA Denoiser For CUDA Path Tracer
 * GPU Compatibility: 7.5
 
 
-## Introduction - Path Tracer
+## Introduction
 
-Ray-tracing is a computer graphics technique to generate 3-dimensional scenes in which we calculate the exact path of reflection or refraction of each ray and trace them all the way back to one or more light sources. Path tracing is a specific form of ray tracing that simulates the way light scatters off surfaces and through media, by generating multiple rays for each pixel(sampling) and bouncing off those rays based on material properties.
 Since we cast many rays per pixel in order to get enough light information, we can get effects like caustics, soft shadows, anti-aliasing, and depth of field. Since this technique involves computing a large number of rays independently, it can be highly parallelized to converge images incredibly faster on a GPU as compared to a path tracer implementation on CPU. In this project, I have used CUDA to compute intersections and shading per iteration for multiple rays parallelly.
-
-
-## Introduction - Denoiser
-
-
 
 In this branch, I have explained how I enhanced my path tracer by implementinf a pathtracing denoiser that uses geometry buffers (G-buffers) to guide a smoothing filter.
 
+|Before denoising(10 iterations)|After denoising (10 iterations)|
+|---|---|
+|![](/img/denoiser/nondenoise_10_time_776dot137.png|![](/img/denoiser/denoise_10_16_65_time_798dot5116.png|
+|Time taken: 776.137ms|Time taken: 798.5116ms|
 
 ## Technical Background
 
@@ -59,16 +57,38 @@ To detect and avoid edges while applying the filter, we make use of deferred sha
 |![](img/denoiser/position.png)|![](img/denoiser/normal.png)|![](img/denoiser/depth.png)|
 
 
-## Denoising Results
+## Denoising Results and Analysis
 
-This denoiser however, does not always give best visual approximation especially for specular transmissive materials as you can see below
+### Changing blur radius
+
+The following chart shows time taken for denoising an image of 10 iterations with a filter size of 5 and varying blur radius.
+![](img/denoiser/kernelsizeanalysis.png)
+
+We can see that as the size of blur radius increases time taken to denoise the image also increases.
+
+
+### Changing image resolution
+
+And not surprisingly, as the resolution of our render increases, time taken to denoise it also increases because of increased number of pixels to be denoised.
+
+While the denoiser may add a small overhead, it generates equally acceptable images in very less iterations, thus making it an effective feature for a path tracer.  For 10 iterations, filter width 5, blur width 17, we see the results below.
+
+![](img/denoiser/resolutionanalysis.png)
+
+|Resolution|Time taken| Render|
+|---|---|---|
+|400 x 400|3.28918 ms |![](img/denoiser/400.png)|
+|600 x 600|5.72173 ms|![](img/denoiser/600.png)|
+|800 x 800|13.4084 ms|![](img/denoiser/800.png)|
+|1000 x 1000|17.682 ms|![](img/denoiser/1000.png)|
+|1200 x 1200|25.1773 ms|![](img/denoiser/1200.png)|
+
+This denoiser does not always appear to give best visual approximation especially for specular transmissive materials as you can see below
 
 |Diffused|Reflective|Transmissive|
 |---|---|---|
 |![](img/denoiser/diffuse_10_16_65.png)|![](img/denoiser/reflective_10_16_65.png)|![](img/denoiser/transmissive_10_16_65.png)|
 
-While the denoiser may add a small overhead, it generates equally acceptable images in very less iterations, thus making it an effective feature for a path tracer. As the size of kernel increases time taken to denoise the image also increases. And not surprisingly, as the resolution of our render increases, time taken to denoise it also increases because of increased number of pixels to be denoised.
-![](img/denoiser/kernelsizeanalysis.png)
-![](img/denoiser/resolutionanalysis.png)
+
 
 ## Bloopers
