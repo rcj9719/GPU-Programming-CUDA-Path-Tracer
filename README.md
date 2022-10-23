@@ -171,6 +171,10 @@ This denoiser however, does not always give best visual approximation especially
 |---|---|---|
 |![](img/denoiser/diffuse_10_16_65.png)|![](img/denoiser/reflective_10_16_65.png)|![](img/denoiser/transmissive_10_16_65.png)|
 
+While the denoiser may add a small overhead, it generates equally acceptable images in very less iterations, thus making it an effective feature for a path tracer. As the size of kernel increases time taken to denoise the image also increases. And not surprisingly, as the resolution of our render increases, time taken to denoise it also increases because of increased number of pixels to be denoised.
+![](img/denoiser/kernelsizeanalysis.png)
+![](img/denoiser/resolutionanalysis.png)
+
 ## Bloopers
 
 ![](img/bloopers/blooper1.png)
