@@ -26,7 +26,7 @@ bool ui_showGbuffer = false;
 bool ui_denoise = false;
 int ui_renderSelect = FINAL;
 
-int ui_maxStepWidth = 5;
+int ui_maxStepWidth = 16;
 float ui_colorWeight = 6.37f;
 float ui_normalWeight = 0.05f;
 float ui_positionWeight = 0.58f;

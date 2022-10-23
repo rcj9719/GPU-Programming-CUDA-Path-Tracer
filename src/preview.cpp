@@ -253,7 +253,7 @@ void RenderImGui(int windowWidth, int windowHeight)
 	// drop all but the last set bit from `n`
 	int effectiveKernelWidth = (n - (n >> 1)) * 4 + 1;
 	ImGui::Text("Effective Kernel Size: %d x %d", effectiveKernelWidth, effectiveKernelWidth);
-	ImGui::SliderFloat("Color Weight", &ui_colorWeight, 0.0f, 10.0f);
+	ImGui::SliderFloat("Color Weight", &ui_colorWeight, 0.0f, 100.0f);
 	ImGui::SliderFloat("Normal Weight", &ui_normalWeight, 0.0f, 1.0f);
 	ImGui::SliderFloat("Position Weight", &ui_positionWeight, 0.0f, 1.0f);
 

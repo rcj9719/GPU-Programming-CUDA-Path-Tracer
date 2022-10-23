@@ -13,6 +13,8 @@
 #include "pathtrace.h"
 #include "intersections.h"
 #include "interactions.h"
+#include "common.h"
+#include "testing_helpers.hpp"
 
 #include <device_launch_parameters.h>
 
@@ -33,6 +35,13 @@
 #define DENOISER 1
 #define DENOISER_EDGE_AVOIDING 1
 #define DENOISER_BASE_FILTER_SIZE 25
+
+using PathTracer::Common::PerformanceTimer;
+PerformanceTimer& timer()
+{
+	static PerformanceTimer timer;
+	return timer;
+}
 
 void checkCUDAErrorFn(const char* msg, const char* file, int line) {
 #if ERRORCHECK
@@ -165,12 +174,12 @@ void InitDataContainer(GuiDataContainer* imGuiData)
 //
 //}
 
-void generateFilterOffsets(std::vector<glm::ivec2> &filterOffsets, std::vector<float> &filter) {
+void generateFilterOffsets(std::vector<glm::ivec2>& filterOffsets, std::vector<float>& filter) {
 	for (int i = -2; i <= 2; i++) {
 		for (int j = -2; j <= 2; j++) {
-			
+
 			filterOffsets.push_back(glm::ivec2(i, j));
-			
+
 			float temp;
 			temp = (pow(0.25, (abs(i) + abs(j))));
 
@@ -208,7 +217,7 @@ void pathtraceInit(Scene* scene) {
 			cudaMemcpy(geom.dev_triangles, geom.triangles, geom.triCount * sizeof(Triangle), cudaMemcpyHostToDevice);
 		}
 	}
-	
+
 	cudaMalloc(&dev_geoms, scene->geoms.size() * sizeof(Geom));
 	cudaMemcpy(dev_geoms, scene->geoms.data(), scene->geoms.size() * sizeof(Geom), cudaMemcpyHostToDevice);
 
@@ -235,7 +244,7 @@ void pathtraceInit(Scene* scene) {
 
 	cudaMalloc(&dev_denoised_image_input, pixelcount * sizeof(glm::vec3));
 	cudaMemset(dev_denoised_image_input, 0, pixelcount * sizeof(glm::vec3));
-	
+
 	cudaMalloc(&dev_denoised_image_output, pixelcount * sizeof(glm::vec3));
 	cudaMemset(dev_denoised_image_output, 0, pixelcount * sizeof(glm::vec3));
 	checkCUDAError("pathtraceInit");
@@ -271,7 +280,7 @@ void pathtraceFree(Scene* scene) {
 
 }
 
-__host__ __device__ glm::vec2 concentricDiskSampling(const glm::vec2 &u) {
+__host__ __device__ glm::vec2 concentricDiskSampling(const glm::vec2& u) {
 
 	//Map uniform random numbers to [-1, 1]
 	glm::vec2 uOffset = 2.f * u - glm::vec2(1.f, 1.f);
@@ -320,16 +329,16 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 
 		// TODO: implement antialiasing by jittering the ray
 #if ANTIALIASING
-			segment.ray.direction = glm::normalize(cam.view
-				- cam.right * cam.pixelLength.x * ((float)(x + jitterX) - (float)cam.resolution.x * 0.5f)
-				- cam.up * cam.pixelLength.y * ((float)(y + jitterY) - (float)cam.resolution.y * 0.5f)
-			);
+		segment.ray.direction = glm::normalize(cam.view
+			- cam.right * cam.pixelLength.x * ((float)(x + jitterX) - (float)cam.resolution.x * 0.5f)
+			- cam.up * cam.pixelLength.y * ((float)(y + jitterY) - (float)cam.resolution.y * 0.5f)
+		);
 
 #else
-			segment.ray.direction = glm::normalize(cam.view
-				- cam.right * cam.pixelLength.x * ((float)(x) - (float)cam.resolution.x * 0.5f)
-				- cam.up * cam.pixelLength.y * ((float)(y) - (float)cam.resolution.y * 0.5f)
-			);
+		segment.ray.direction = glm::normalize(cam.view
+			- cam.right * cam.pixelLength.x * ((float)(x)-(float)cam.resolution.x * 0.5f)
+			- cam.up * cam.pixelLength.y * ((float)(y)-(float)cam.resolution.y * 0.5f)
+		);
 #endif
 
 #if DOF
@@ -574,46 +583,46 @@ __global__ void denoiser(
 		glm::vec3 cval = inputImage[idx];
 		glm::vec3 pval = gBuffer[idx].pos;
 		glm::vec3 nval = gBuffer[idx].nor;
-		
+
 		glm::vec3 outputColor = glm::vec3(0.f);
 		float cum_w = 0.0;
 		float weight = 1.f;
 		//for (int stepIter = 0; stepIter < 10; stepIter++) {
 		//	stepWidth = 1 << stepIter;
 
-			for (int i = 0; i < filterSize; i++) {
-				glm::ivec2 uv = glm::ivec2(filterOffsets[i].x * stepWidth, filterOffsets[i].y * stepWidth) + glm::ivec2(x, y);
-				
-				if (uv.x < resolution.x && uv.x >= 0 && uv.y < resolution.y && uv.y >= 0) {
-					int idxtmp = uv.x + (uv.y * resolution.x);
-					//if (idxtmp > 0 && idxtmp < num_paths) {
+		for (int i = 0; i < filterSize; i++) {
+			glm::ivec2 uv = glm::ivec2(filterOffsets[i].x * stepWidth, filterOffsets[i].y * stepWidth) + glm::ivec2(x, y);
 
-					glm::vec3 ctmp = inputImage[idxtmp];
+			if (uv.x < resolution.x && uv.x >= 0 && uv.y < resolution.y && uv.y >= 0) {
+				int idxtmp = uv.x + (uv.y * resolution.x);
+				//if (idxtmp > 0 && idxtmp < num_paths) {
+
+				glm::vec3 ctmp = inputImage[idxtmp];
 
 #if DENOISER_EDGE_AVOIDING
-					glm::vec3 t = cval - ctmp;
-					float dist2 = glm::dot(t, t);
-					float c_w = glm::min(glm::exp(-(dist2)/cphi), 1.f);
+				glm::vec3 t = cval - ctmp;
+				float dist2 = glm::dot(t, t);
+				float c_w = glm::min(glm::exp(-(dist2) / cphi), 1.f);
 
-					glm::vec3 ntmp = gBuffer[idxtmp].nor;
-					t = nval - ntmp;
-					dist2 = glm::max(glm::dot(t, t)/(stepWidth * stepWidth), 0.f);
-					float n_w = glm::min(glm::exp(-(dist2) / nphi), 1.f);
+				glm::vec3 ntmp = gBuffer[idxtmp].nor;
+				t = nval - ntmp;
+				dist2 = glm::max(glm::dot(t, t) / (stepWidth * stepWidth), 0.f);
+				float n_w = glm::min(glm::exp(-(dist2) / nphi), 1.f);
 
-					glm::vec3 ptmp = gBuffer[idxtmp].pos;
-					t = pval - ptmp;
-					dist2 = glm::dot(t, t);
-					float p_w = glm::min(glm::exp(-(dist2) / pphi), 1.f);
+				glm::vec3 ptmp = gBuffer[idxtmp].pos;
+				t = pval - ptmp;
+				dist2 = glm::dot(t, t);
+				float p_w = glm::min(glm::exp(-(dist2) / pphi), 1.f);
 
-					weight = c_w * n_w * p_w;
+				weight = c_w * n_w * p_w;
 
 #endif
-					outputColor += weight * filter[i] * ctmp;
-					cum_w += weight * filter[i];
-				}
+				outputColor += weight * filter[i] * ctmp;
+				cum_w += weight * filter[i];
 			}
+		}
 		//}
-		outputImage[idx] = outputColor/cum_w;
+		outputImage[idx] = outputColor / cum_w;
 	}
 }
 
@@ -692,6 +701,11 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 
 	// TODO: perform one iteration of path tracing
 
+	//if (iter == 1) {
+	//}
+	if (iter == 1) {
+		timer().startGpuTimer();
+	}
 	generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths);	// iter sample number
 	checkCUDAError("generate camera ray");
 
@@ -701,7 +715,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 
 	// --- PathSegment Tracing Stage ---
 	// Shoot ray into scene, bounce between objects, push shading chunks
-	
+
 	int new_num_paths = num_paths;
 	bool iterationComplete = false;
 	while (!iterationComplete) {
@@ -724,7 +738,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 				, dev_cache_intersections
 				);
 		}
-		
+
 		if (depth == 0) {
 			cudaMemcpy(dev_intersections, dev_cache_intersections, pixelcount * sizeof(ShadeableIntersection), cudaMemcpyDeviceToDevice);
 		}
@@ -784,7 +798,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 		new_num_paths = dev_path_end - dev_paths;
 
 		depth++;
-		if (new_num_paths == 0){
+		if (new_num_paths == 0) {
 			iterationComplete = true;
 		}
 
@@ -799,14 +813,19 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 	finalGather << <numBlocksPixels, blockSize1d >> > (num_paths, dev_image, dev_paths);
 
 	///////////////////////////////////////////////////////////////////////////
-	
+
 	// CHECKITOUT4: use dev_image as reference if you want to implement saving denoised images.
 	// Otherwise, screenshots are also acceptable.
 	// Retrieve image from GPU
 
 	cudaMemcpy(hst_scene->state.image.data(), dev_image,
 		pixelcount * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
-
+	
+	if (iter == 10) {
+		timer().endGpuTimer();
+		printf("###PATHTRACER#####");
+		printElapsedTime(timer().getGpuElapsedTimeForPreviousOperation(), "(std::chrono Measured)");
+	}
 	checkCUDAError("pathtrace");
 }
 
@@ -827,7 +846,6 @@ void showGBuffer(uchar4* pbo, int renderSelect) {
 	case POSITION: gPositionBufferToPBO << <blocksPerGrid2d, blockSize2d >> > (pbo, cam.resolution, dev_gBuffer);
 		break;
 	}
-	
 }
 
 void showImage(uchar4* pbo, int iter) {
@@ -836,11 +854,12 @@ void showImage(uchar4* pbo, int iter) {
 	const dim3 blocksPerGrid2d(
 		(cam.resolution.x + blockSize2d.x - 1) / blockSize2d.x,
 		(cam.resolution.y + blockSize2d.y - 1) / blockSize2d.y);
-
+	const int pixelcount = cam.resolution.x * cam.resolution.y;
 	// Send results to OpenGL buffer for rendering
 	sendImageToPBO << <blocksPerGrid2d, blockSize2d >> > (pbo, cam.resolution, iter, dev_image);
 }
 
+bool printed = false;
 void showDenoisedImage(uchar4* pbo, int iter, int maxStepWidth, float cphi, float nphi, float pphi) {
 	const Camera& cam = hst_scene->state.camera;
 	const dim3 blockSize2d(8, 8);
@@ -849,10 +868,15 @@ void showDenoisedImage(uchar4* pbo, int iter, int maxStepWidth, float cphi, floa
 		(cam.resolution.y + blockSize2d.y - 1) / blockSize2d.y);
 
 	// Send results to OpenGL buffer for rendering
-#if DENOISER
+
 	const int pixelcount = cam.resolution.x * cam.resolution.y;
 	cudaMemcpy(dev_denoised_image_input, dev_image, pixelcount * sizeof(glm::vec3), cudaMemcpyDeviceToDevice);
 	int stepWidth = 0;
+#if DENOISER
+	if (!printed) {
+		timer().startGpuTimer();
+	}
+
 	for (int stepIter = 0; stepIter < 5; stepIter++) {
 		stepWidth = 1 << stepIter;
 		if (stepWidth <= maxStepWidth) {
@@ -864,6 +888,12 @@ void showDenoisedImage(uchar4* pbo, int iter, int maxStepWidth, float cphi, floa
 		}
 	}
 	sendImageToPBO << <blocksPerGrid2d, blockSize2d >> > (pbo, cam.resolution, iter, dev_denoised_image_output);
+	
+	if (!printed) {
+		timer().endGpuTimer();
+		printElapsedTime(timer().getGpuElapsedTimeForPreviousOperation(), "(std::chrono Measured)");
+		printed = true;
+	}
 #endif
 }
 
