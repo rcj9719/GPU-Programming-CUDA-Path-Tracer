@@ -105,7 +105,7 @@ This denoiser does not always appear to give best visual approximation especiall
 ### Obtaining visually smooth results
 
 |Status|Iterations|Time taken|Render|
-|---|---|---|---|---|
+|---|---|---|---|
 |Denoiser on|10|0.798 seconds|![](img/denoiser/denoise_10_16_65_time_798dot5116.png)|
 |Denoiser off|200|13.96 seconds|![](img/denoiser/nondenoise_200_time_13961dot3.png)|
 
