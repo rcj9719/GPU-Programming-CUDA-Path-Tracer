@@ -59,17 +59,24 @@ To detect and avoid edges while applying the filter, we make use of deferred sha
 
 ## Denoising Results and Analysis
 
-### Changing blur radius
+### Changing blur radius vs changing filter size
 
 The following chart shows time taken for denoising an image of 10 iterations with a filter size of 5 and varying blur radius.
+
 ![](img/denoiser/kernelsizeanalysis.png)
 
 We can see that as the size of blur radius increases time taken to denoise the image also increases.
+For a fixed filter size of 5, we can increase the blur radius to get better denoised images as you can see below:
 
+### Gaussian vs ATrous filter
+
+Since ATrous filter spreads out the filter sparsely and calculates the sam enumber of pixels per iteration, it performs much more effectively than Gaussian filter of same size as the blur radius. Visually, Gaussian may generate better blur images.
+
+![](img/denoiser/filtersize.png)
 
 ### Changing image resolution
 
-And not surprisingly, as the resolution of our render increases, time taken to denoise it also increases because of increased number of pixels to be denoised.
+Not surprisingly, as the resolution of our render increases, time taken to denoise it also increases because of increased number of pixels to be denoised.
 
 While the denoiser may add a small overhead, it generates equally acceptable images in very less iterations, thus making it an effective feature for a path tracer.  For 10 iterations, filter width 5, blur width 17, we see the results below.
 
