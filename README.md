@@ -89,11 +89,18 @@ While the denoiser may add a small overhead, it generates equally acceptable ima
 |800 x 800|13.4084 ms|![](img/denoiser/800.png)|
 |1000 x 1000|17.682 ms|![](img/denoiser/1000.png)|
 
+### Denoiser on different materials
+
 This denoiser does not always appear to give best visual approximation especially for specular transmissive materials as you can see below
 
-|Diffused|Reflective|Transmissive|
-|---|---|---|
-|![](img/denoiser/diffuse_10_16_65.png)|![](img/denoiser/reflective_10_16_65.png)|![](img/denoiser/transmissive_10_16_65.png)|
+**Diffused materials** - Diffused materials generally look good and do not lose out on any specific visual features like color, positions etc because of geometry buffers passed in.
+![](img/denoiser/diffuse_10_16_65.png)
+
+**Reflective** - Reflections can also get blurred, as edge avoidance does not avoid edges inside reflections, making it appear like a microfacet reflecting material with increased roughness instead of purely reflective specular material.
+![](img/denoiser/reflective_10_16_65.png)
+
+**Transmissive** - Transmissive materials may also lose some prominent visible features such as caustics.
+![](img/denoiser/transmissive_10_16_65.png)
 
 
 
