@@ -9,4 +9,4 @@ void pathtraceFree(Scene* scene);
 void pathtrace(uchar4 *pbo, int frame, int iteration);
 void showGBuffer(uchar4* pbo, int renderSelect);
 void showImage(uchar4* pbo, int iter);
-void showDenoisedImage(uchar4* pbo, int iter, float cphi, float nphi, float pphi);
+void showDenoisedImage(uchar4* pbo, int iter, int uiFilterSize, float cphi, float nphi, float pphi);

@@ -32,6 +32,7 @@
 
 #define DENOISER 1
 #define DENOISER_EDGE_AVOIDING 1
+#define DENOISER_BASE_FILTER_SIZE 25
 
 void checkCUDAErrorFn(const char* msg, const char* file, int line) {
 #if ERRORCHECK
@@ -226,11 +227,11 @@ void pathtraceInit(Scene* scene) {
 	cudaMalloc(&dev_gBuffer, pixelcount * sizeof(GBufferPixel));
 	cudaMemset(dev_gBuffer, 0, pixelcount * sizeof(GBufferPixel));
 
-	cudaMalloc(&dev_filter, 25 * sizeof(float));
-	cudaMemcpy(dev_filter, filter.data(), 25 * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMalloc(&dev_filter, DENOISER_BASE_FILTER_SIZE * sizeof(float));
+	cudaMemcpy(dev_filter, filter.data(), DENOISER_BASE_FILTER_SIZE * sizeof(float), cudaMemcpyHostToDevice);
 
-	cudaMalloc(&dev_filterOffsets, 25 * sizeof(glm::ivec2));
-	cudaMemcpy(dev_filterOffsets, filterOffsets.data(), 25 * sizeof(glm::ivec2), cudaMemcpyHostToDevice);
+	cudaMalloc(&dev_filterOffsets, DENOISER_BASE_FILTER_SIZE * sizeof(glm::ivec2));
+	cudaMemcpy(dev_filterOffsets, filterOffsets.data(), DENOISER_BASE_FILTER_SIZE * sizeof(glm::ivec2), cudaMemcpyHostToDevice);
 
 	cudaMalloc(&dev_denoised_image_input, pixelcount * sizeof(glm::vec3));
 	cudaMemset(dev_denoised_image_input, 0, pixelcount * sizeof(glm::vec3));
@@ -550,7 +551,7 @@ __global__ void generateGBuffer(
 }
 
 __global__ void denoiser(
-	//int num_paths,
+	int filterSize,
 	int stepWidth,
 	glm::ivec2 resolution,
 	float cphi,
@@ -580,7 +581,7 @@ __global__ void denoiser(
 		//for (int stepIter = 0; stepIter < 10; stepIter++) {
 		//	stepWidth = 1 << stepIter;
 
-			for (int i = 0; i < 25; i++) {
+			for (int i = 0; i < filterSize; i++) {
 				glm::ivec2 uv = glm::ivec2(filterOffsets[i].x * stepWidth, filterOffsets[i].y * stepWidth) + glm::ivec2(x, y);
 				
 				if (uv.x < resolution.x && uv.x >= 0 && uv.y < resolution.y && uv.y >= 0) {
@@ -840,7 +841,7 @@ void showImage(uchar4* pbo, int iter) {
 	sendImageToPBO << <blocksPerGrid2d, blockSize2d >> > (pbo, cam.resolution, iter, dev_image);
 }
 
-void showDenoisedImage(uchar4* pbo, int iter, float cphi, float nphi, float pphi) {
+void showDenoisedImage(uchar4* pbo, int iter, int maxStepWidth, float cphi, float nphi, float pphi) {
 	const Camera& cam = hst_scene->state.camera;
 	const dim3 blockSize2d(8, 8);
 	const dim3 blocksPerGrid2d(
@@ -854,8 +855,13 @@ void showDenoisedImage(uchar4* pbo, int iter, float cphi, float nphi, float pphi
 	int stepWidth = 0;
 	for (int stepIter = 0; stepIter < 5; stepIter++) {
 		stepWidth = 1 << stepIter;
-		denoiser << <blocksPerGrid2d, blockSize2d >> > (stepWidth, cam.resolution, cphi, nphi, pphi, dev_denoised_image_input, dev_denoised_image_output, dev_gBuffer, dev_filter, dev_filterOffsets);
-		std::swap(dev_denoised_image_input, dev_denoised_image_output);
+		if (stepWidth <= maxStepWidth) {
+			denoiser << <blocksPerGrid2d, blockSize2d >> > (DENOISER_BASE_FILTER_SIZE, stepWidth, cam.resolution, cphi, nphi, pphi, dev_denoised_image_input, dev_denoised_image_output, dev_gBuffer, dev_filter, dev_filterOffsets);
+			std::swap(dev_denoised_image_input, dev_denoised_image_output);
+		}
+		else {
+			break;
+		}
 	}
 	sendImageToPBO << <blocksPerGrid2d, blockSize2d >> > (pbo, cam.resolution, iter, dev_denoised_image_output);
 #endif

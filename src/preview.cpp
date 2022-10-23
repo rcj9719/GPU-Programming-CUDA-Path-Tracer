@@ -242,10 +242,20 @@ void RenderImGui(int windowWidth, int windowHeight)
 
 	ImGui::Checkbox("Denoise", &ui_denoise);
 
-	ImGui::SliderInt("Filter Size", &ui_filterSize, 0, 100);
+	ImGui::SliderInt("Max Step Width", &ui_maxStepWidth, 1, 16);
+	int n = ui_maxStepWidth;
+	n = n | (n >> 1);
+	n = n | (n >> 2);
+	n = n | (n >> 4);
+	n = n | (n >> 8);
+	n = n | (n >> 16);
+
+	// drop all but the last set bit from `n`
+	int effectiveKernelWidth = (n - (n >> 1)) * 4 + 1;
+	ImGui::Text("Effective Kernel Size: %d x %d", effectiveKernelWidth, effectiveKernelWidth);
 	ImGui::SliderFloat("Color Weight", &ui_colorWeight, 0.0f, 10.0f);
-	ImGui::SliderFloat("Normal Weight", &ui_normalWeight, 0.0f, 10.0f);
-	ImGui::SliderFloat("Position Weight", &ui_positionWeight, 0.0f, 10.0f);
+	ImGui::SliderFloat("Normal Weight", &ui_normalWeight, 0.0f, 1.0f);
+	ImGui::SliderFloat("Position Weight", &ui_positionWeight, 0.0f, 1.0f);
 
 	ImGui::Separator();
 

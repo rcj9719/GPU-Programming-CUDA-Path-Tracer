@@ -26,10 +26,10 @@ bool ui_showGbuffer = false;
 bool ui_denoise = false;
 int ui_renderSelect = FINAL;
 
-int ui_filterSize = 80;
-float ui_colorWeight = 0.45f;
-float ui_normalWeight = 0.35f;
-float ui_positionWeight = 0.2f;
+int ui_maxStepWidth = 5;
+float ui_colorWeight = 6.37f;
+float ui_normalWeight = 0.05f;
+float ui_positionWeight = 0.58f;
 bool ui_saveAndExit = false;
 
 static bool camchanged = true;
@@ -158,7 +158,7 @@ void runCuda() {
 
 	// Map OpenGL buffer object for writing from CUDA on a single GPU
 	// No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
-
+	
 	if (iteration == 0) {
 		pathtraceFree(scene);
 		pathtraceInit(scene);
@@ -179,7 +179,7 @@ void runCuda() {
 		float cphi = ui_colorWeight * ui_colorWeight;
 		float nphi = ui_normalWeight * ui_normalWeight;
 		float pphi = ui_positionWeight * ui_positionWeight;
-		showDenoisedImage(pbo_dptr, iteration, cphi, nphi, pphi);
+		showDenoisedImage(pbo_dptr, iteration, ui_maxStepWidth, cphi, nphi, pphi);
 	}
 	else if (ui_renderSelect) {
 		showGBuffer(pbo_dptr, ui_renderSelect);
