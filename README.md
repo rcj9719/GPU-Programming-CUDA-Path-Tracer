@@ -1,4 +1,4 @@
-CUDA Denoiser For CUDA Path Tracer
+ATrous Edge Avoiding Denoiser For CUDA Path Tracer
 ================
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 2**
